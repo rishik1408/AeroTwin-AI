@@ -11,128 +11,62 @@ Developed for Smart India Hackathon 2026.
 - **Shama**: Telemetry & Edge Pipeline Engineer
 - **Hansika**: Full-Stack & UI Developer
 
-## Architecture
-- **Simulation**: SciPy/NumPy based thermodynamic modeling.
-- **Edge**: CAN bus & MQTT (Mosquitto).
-- **Backend**: FastAPI, WebSockets, InfluxDB.
-- **AI/ML**: PyTorch, XGBoost, SHAP for PINNs & XAI.
-- **Frontend**: React.js / Grafana HMI.
+## Data Workflow Architecture
+The system architecture follows a closed-loop digital twin model, integrating real-time physical simulation, edge telemetry, and deep learning diagnostics.
+
+```mermaid
+graph TD
+    classDef primary fill:#e1f5fe,stroke:#0288d1,stroke-width:2px,color:#01579b,font-weight:bold;
+    classDef secondary fill:#f3e5f5,stroke:#8e24aa,stroke-width:2px,color:#4a148c,font-weight:bold;
+    classDef subProcess fill:#e8eaf6,stroke:#3949ab,stroke-width:2px,color:#1a237e,font-weight:bold;
+    classDef aiNode fill:#fff3e0,stroke:#f57c00,stroke-width:2px,color:#e65100,font-weight:bold;
+    classDef outputText fill:none,stroke:none,color:#333,font-weight:bold;
+
+    A["1. Virtual Engine Model<br>(Physics Simulation)"]:::primary
+    B["2. Edge Telemetry<br>(CAN / MQTT Stream)"]:::primary
+    C["3. FastAPI & InfluxDB<br>Ingestion Backend"]:::primary
+    
+    D["InfluxDB<br>Storage"]:::subProcess
+    E["Data<br>Preprocessing"]:::subProcess
+    
+    subgraph AI_Engine ["4. AI Inference Engine"]
+        F1["RUL Prediction"]:::aiNode
+        F2["Anomaly Detection"]:::aiNode
+        F3["SHAP Explainability"]:::aiNode
+    end
+    
+    O1["RUL Predictions"]:::outputText
+    O2["Anomaly Alerts"]:::outputText
+    O3["Root Cause Data"]:::outputText
+    
+    G["5. Operator HMI<br>Dashboard & Replay"]:::primary
+    H["Operator Analysis &<br>Parameter Tweaking"]:::secondary
+
+    A -->|"Raw Data"| B
+    B --> C
+    C --> D
+    C --> E
+    E --> F1
+    E --> F2
+    E --> F3
+    F1 -.-> O1
+    F2 -.-> O2
+    F3 -.-> O3
+    F1 --> G
+    F2 --> G
+    F3 --> G
+    D -->|"Historical Data<br>(For Replay)"| G
+    G --> H
+    H -->|"Closed Loop Feedback"| A
+```
+
+### Data Pipeline Flow
+1. **Virtual Engine Model**: Physics simulation calculates real-time variables (RPM, CHT, EGT, vibration).
+2. **Edge Telemetry**: Packages raw data into JSON and pushes it via MQTT/CAN to simulate UAV constraints.
+3. **Backend Split**: Data is bifurcated into a **Cold Path** (InfluxDB for Mission Replay) and a **Hot Path** (Preprocessing for AI).
+4. **AI Inference**: Preprocessed data enters multi-branch neural networks outputting RUL, Anomaly Alerts, and SHAP Root Causes.
+5. **Operator HMI & Feedback Loop**: The dashboard visualizes the diagnostics. Operators can tweak parameters (e.g., lower throttle), which feeds back into the virtual engine to dynamically resolve issues.
 
 ## Quickstart
 1. Spin up the infrastructure (MQTT + InfluxDB):
-   \`docker-compose up -d\`
-
-
-
-## Background:
-
-Medium Altitude Long Endurance (MALE) UAV are increasingly being deployed for Long-duration intelligence, surveillance, reconnaissance (ISR).
-
-Communication relay maritime surveillance and strategic defence missions Reliability and availability of propulsion systems are critical for mission success because piston-engine failures during flight may lead to mission abort, asset loss, or unsafe recovery conditions.
-
-Conventional engine monitoring systems used in UAVs are primarily thresholdbased and reactive in nature. These systems generally indicate failures only after abnormality has already occurred. Present approaches also have limited capability to estimate remaining useful life (RUL) predict degradation trends, or simulate mission-wise engine behavior under varying environmental and operating conditions.
-
-A Digital Twin (DT) framework for aero piston engines can significantly improve predictive maintenance, operational reliability, mission planning, and life cycle management by creating a continuously synchronized virtual representation of the physical engine using real-time sensor data physics-based models and AI/ML techniques.
-
-The proposed problem aims to develop an indigenous Digital Twin framework suitable for deployment in MALE UAV ground control and health monitoring architecture. The solution should support real-time engine state estimation, anomaly detection degradation tracking, faultprediction, and mission replay capability.
-
-## Description:
-
-Develop a scalable and modular digital Twin System for an aero piston engine used in MALE UAV applications. The system shall create a real-time virtual representation of the engine by integrating.
-
-• Engine sensor data
-• Thermodynamic behavior models
-• Engine performance maps
-• Failure/degradation logit
-• AI/ML based predictive analytics The proposed system should be capable of:
-• Real-time engine parameter visualization
-• Monitoring of engine health indicators
-• Defection of abnormal operating conditions
-• Predicting probable failures before occurrence
-• Estimating degradation trends and Remaining Useful Life (RUL)
-• Simulating engine behavior under different mission profiles and environmental conditions
-• Supporting post-flight analysis and mission replay The system may utilize
-• CAN bus/Socket CAN-based engine data acquisition
-• ECU/FADEC communication interfaces Edge computing architecture Cloud or local server-based analytics
-• AI/ML algorithms far anomaly detection
-• Physics informed modelling approaches
-• Dash board/HMI for operators and maintenance engineers
-• Expected Solution:
-
-The digital twin core framework shall act as the central intelligence layer that continuously mirrors the real aero-piston engine operating onboard the MALE UAV. The framework should establish a dynamic and continuously synchronized virtual representation of the engine using live telemetry, physicsbased models, operational history and AI-Driven analytics. The framework should be designed considering future deployment in defence grade Ground Control Station (GCS), engine test rigs, and fleet-level health monitoring infrastructures. The expected solution should include:
-
-- **A. Digital Twin Core Framework**
-• Virtual engine model synchronized with live engine data
-• Modular architecture for future scalability
-• Real-time data ingestion capability 
-
-- **B. Health Monitoring System**: The health monitoring system shall continuously assess the condition of engine sub-systems and generate health indices for predictive maintenance. Monitoring of following engine parameter are required:
-- RPM
-- Cylinder Head Temperature (CHT)
-- Exhaust Gas Temperature (EGT)
-- Oil Pressure & Temperature  
-- Fuel flow
-- Vibration signatures
-- Battery Alternator health
-- Injection timing parameters 
-
-- **C. Fault Detection & Predictive Analytics**: The system should transition from conventional threshold-based monitoring to intelligent predictive diagnostics. The detection/prediction of following parameters are required:
-• Misfire conditions
-• Injector abnormalities
-• Coding degradation
-• Lubrication issues
-• Sensor drift/ failure
-• Combustion instability
-• Overheating trends
-• Abnormal vibration patterns 
-
-- **D. AE/ML Layer**: The AI/ML layer shall provide adaptive learning capability for predictive diagnostic and intelligent maintenance planning. Following parameters are required to be captured:
-• Anomaly detection algorithms
-• Remaining Useful Life (RUL) estimation
-• Trend analysis
-• Predictive maintenance recommendations 
-
-- **E. Simulation & Replay Capability**: The system should include simulation tools to reproduce engine behavior and analyses mission scenarios. Following parameters are required to be captured:
-• Replay of historical mission data
-• Environmental condition simulation
-• Engine behavior simulation during
-• High Altitude
-• Endurance mission
-• Hot-weather operation
-• Rapid throttle transitions 
-
-- **F. Visualization Dashboard**: The dashboard shall provide an intuitive operational interface for UAV operators, propulsion engineers and maintenance team. A user Interface displaying dashboard should support following:
-• Real-time engine health status
-• Fault alerts
-• Engine efficiency trends
-• Maintenance advisory
-• Mission-wise health reports
-
-- **Deliverables Expected from Team**:
-• Functional prototype/software demonstrator
-• Digital twin architecture design
-• Engine Simulation model
-• AI/ML-based anomaly detection module
-• Visualization dashboard
-• Demonstration using simulated or real engine datasets
-• Technical documentation and deployment roadmap Desired Innovation Areas: Participants are encouraged to explore:
-• Physics-informed AI
-• Edge AI for UAV applications
-• Lightweight onboard analytics
-• Hybrid thermodynamic + data-driven models
-• Federated learning approaches
-• Explainable AI for fault diagnosis
-• Secure telemetry architecture
-• Autonomous maintenance advisory systems 
-
-- **Technical Expectations from Participants**: 
-Teams are expected to demonstrate understanding of:
-• IC engine fundamentals
-• UAV propulsion systems
-• Sensor fusion
-• Embedded systems
-• CAN communication
-• AI/ML analytics
-• Data visualization
-• Simulation modelling
-• Reliability engineering
+   `docker-compose up -d`
