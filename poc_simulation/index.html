@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AeroTwin - System Architecture HMI</title>
+    <!-- Include MQTT.js -->
+    <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+    <style>
+        body {
+            background-color: #0b0c10;
+            color: #c5c6c7;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #66fcf1;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 30px;
+        }
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            max-width: 1300px;
+            margin: 0 auto;
+        }
+        .panel {
+            background-color: #1f2833;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+        .panel h2 {
+            margin-top: 0;
+            color: #45a29e;
+            border-bottom: 1px solid #45a29e;
+            padding-bottom: 10px;
+        }
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            padding: 8px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 4px;
+        }
+        .value {
+            font-weight: bold;
+            color: #ffffff;
+        }
+        .ai-module {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #45a29e;
+            border-radius: 5px;
+        }
+        .ai-module h3 {
+            margin: 0 0 10px 0;
+            color: #66fcf1;
+            font-size: 1rem;
+        }
+        
+        .ai-status {
+            text-align: center;
+            font-size: 1.5rem;
+            font-weight: bold;
+            padding: 10px;
+            border-radius: 5px;
+        }
+        
+        /* Interactive Controls */
+        .control-panel {
+            grid-column: 1 / -1;
+            text-align: center;
+            background: #0f171e;
+            border: 2px dashed #45a29e;
+        }
+        .btn {
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+            text-transform: uppercase;
+        }
+        .btn:hover { background-color: #c0392b; }
+        .btn:disabled { background-color: #555; cursor: not-allowed; }
+
+        /* Dynamic Status Colors */
+        .status-normal { color: #2ecc71; }
+        .status-warning { color: #f1c40f; }
+        .status-critical { color: #e74c3c; animation: blink 1s infinite; }
+        @keyframes blink { 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body>
+
+    <h1>🚀 AeroTwin Digital Twin - Live System Flow</h1>
+
+    <div class="dashboard-grid">
+        <!-- Telemetry Panel -->
+        <div class="panel">
+            <h2>⚙️ 1 & 2. Engine Model & Edge Telemetry</h2>
+            <div class="metric-row">
+                <span>Throttle Position:</span>
+                <span class="value" id="val-throttle">--</span>
+            </div>
+            <div class="metric-row">
+                <span>Engine RPM:</span>
+                <span class="value" id="val-rpm">--</span>
+            </div>
+            <div class="metric-row">
+                <span>Cylinder Head Temp (°C):</span>
+                <span class="value" id="val-cht">--</span>
+            </div>
+            <div class="metric-row">
+                <span>Exhaust Gas Temp (°C):</span>
+                <span class="value" id="val-egt">--</span>
+            </div>
+            <div class="metric-row">
+                <span>Vibration RMS (g):</span>
+                <span class="value" id="val-vib">--</span>
+            </div>
+            <div style="font-size: 0.9rem; color: #888; margin-top: 10px;">
+                Pipeline: Virtual Engine -> Edge -> MQTT
+            </div>
+        </div>
+
+        <!-- AI Panel -->
+        <div class="panel">
+            <h2>🧠 4. AI Inference Engine</h2>
+            
+            <div class="ai-module">
+                <h3>A. Anomaly Detection Alert</h3>
+                <div class="ai-status" id="val-status">WAITING FOR DATA</div>
+            </div>
+
+            <div class="ai-module">
+                <h3>B. RUL Prediction (Remaining Useful Life)</h3>
+                <div class="metric-row" style="margin:0; background:transparent;">
+                    <span>Flight Hours Remaining:</span>
+                    <span class="value" id="val-rul" style="font-size:1.5rem;">--</span>
+                </div>
+            </div>
+
+            <div class="ai-module">
+                <h3>C. SHAP Explainability (Root Cause)</h3>
+                <div class="metric-row" style="margin:0; background:transparent; font-size:1rem; color:#f1c40f;">
+                    <span id="val-shap">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Control Loop Panel -->
+        <div class="panel control-panel">
+            <h2>🔄 5. Operator Analysis & Parameter Tweaking (Closed Loop)</h2>
+            <p>If the AI detects an anomaly, the operator can intervene here to tweak parameters and save the engine.</p>
+            <button id="btn-throttle" class="btn" disabled onclick="reduceThrottle()">⏬ Reduce Throttle (Trigger Recovery)</button>
+        </div>
+    </div>
+
+    <script>
+        const client = mqtt.connect('wss://test.mosquitto.org:8081/mqtt');
+        let currentStatus = "NORMAL";
+
+        client.on('connect', function () {
+            console.log('Connected to MQTT via WebSockets');
+            client.subscribe('aerotwin/demo/telemetry');
+            client.subscribe('aerotwin/demo/ai');
+            document.getElementById('val-status').innerText = "CONNECTED";
+        });
+
+        client.on('message', function (topic, message) {
+            try {
+                const data = JSON.parse(message.toString());
+                
+                if (topic === 'aerotwin/demo/telemetry') {
+                    document.getElementById('val-throttle').innerText = data.throttle + "%";
+                    document.getElementById('val-rpm').innerText = data.rpm;
+                    document.getElementById('val-cht').innerText = data.cht;
+                    document.getElementById('val-egt').innerText = data.egt;
+                    document.getElementById('val-vib').innerText = data.vibration;
+                } 
+                else if (topic === 'aerotwin/demo/ai') {
+                    const ai = data.ai_inference;
+                    currentStatus = ai.anomaly_alert;
+                    
+                    const statusEl = document.getElementById('val-status');
+                    statusEl.innerText = currentStatus;
+                    document.getElementById('val-rul').innerText = ai.rul_prediction + " H";
+                    document.getElementById('val-shap').innerText = ai.shap_explainability;
+
+                    // Button Logic
+                    const btn = document.getElementById('btn-throttle');
+                    if(currentStatus === "CRITICAL" || currentStatus === "WARNING") {
+                        btn.disabled = false;
+                        btn.innerText = "🚨 ENGINE FAULT - REDUCE THROTTLE NOW 🚨";
+                    } else {
+                        btn.disabled = true;
+                        btn.innerText = "Engine Stable (100% Throttle)";
+                    }
+
+                    // Styling
+                    statusEl.className = "ai-status";
+                    if (currentStatus === "NORMAL") {
+                        statusEl.classList.add('status-normal');
+                    } else if (currentStatus === "WARNING") {
+                        statusEl.classList.add('status-warning');
+                    } else {
+                        statusEl.classList.add('status-critical');
+                    }
+                }
+            } catch (e) { console.error(e); }
+        });
+
+        // H to Virtual Engine - Feedback Loop
+        function reduceThrottle() {
+            const payload = JSON.stringify({ "action": "reduce_throttle" });
+            client.publish('aerotwin/demo/control', payload);
+            
+            const btn = document.getElementById('btn-throttle');
+            btn.disabled = true;
+            btn.innerText = "Throttle Reduced... Cooling Engine...";
+        }
+    </script>
+</body>
+</html>

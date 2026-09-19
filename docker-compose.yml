@@ -1,0 +1,33 @@
+version: '3.8'
+services:
+  mqtt_broker:
+    image: eclipse-mosquitto:latest
+    container_name: aerotwin_mqtt
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    restart: unless-stopped
+
+  influxdb:
+    image: influxdb:2.0
+    container_name: aerotwin_influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=aerotwin_admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=aerotwin_secure_pwd
+      - DOCKER_INFLUXDB_INIT_ORG=aerotwin_org
+      - DOCKER_INFLUXDB_INIT_BUCKET=engine_telemetry
+    volumes:
+      - influxdb2_data:/var/lib/influxdb2
+      - influxdb2_config:/etc/influxdb2
+    restart: unless-stopped
+
+volumes:
+  influxdb2_data:
+  influxdb2_config:
