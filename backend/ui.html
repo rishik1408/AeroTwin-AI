@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AeroTwin — Engine Control Dashboard</title>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --panel: #161922;
+    --card: #1c2030;
+    --border: #2a3045;
+    --accent: #3b82f6;
+    --accent2: #10b981;
+    --warn: #f59e0b;
+    --danger: #ef4444;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --font: 'Segoe UI', system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    padding: 16px;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  header .logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--accent);
+  }
+  header .logo span { color: var(--text); }
+  header .badge {
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  header .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent2);
+    box-shadow: 0 0 6px var(--accent2);
+    margin-left: auto;
+  }
+  header .status-dot.off { background: var(--danger); box-shadow: 0 0 6px var(--danger); }
+  header .status-label { font-size: 0.8rem; color: var(--muted); }
+
+  .layout {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    grid-template-rows: auto auto;
+    gap: 16px;
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+
+  .panel-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  /* Sliders */
+  .ctrl { margin-bottom: 18px; }
+  .ctrl-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .ctrl-label { font-size: 0.85rem; color: var(--text); }
+  .ctrl-value { font-size: 0.85rem; font-weight: 600; color: var(--accent); }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--border);
+    outline: none;
+    cursor: pointer;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: pointer;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+  }
+  input[type="range"]:active::-webkit-slider-thumb { box-shadow: 0 0 0 5px rgba(59,130,246,0.35); }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 9px 16px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.15s;
+    width: 100%;
+    margin-bottom: 8px;
+  }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { background: #dc2626; }
+  .btn-warn { background: var(--warn); color: #000; }
+  .btn-warn:hover { background: #d97706; }
+  .btn-ghost { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+  .btn-ghost:hover { background: var(--border); }
+
+  /* Telemetry grid */
+  .telemetry-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+
+  .metric {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.3s;
+  }
+  .metric::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 3px 0 0 3px;
+    transition: background 0.3s;
+  }
+  .metric.warn { border-color: var(--warn); }
+  .metric.warn::before { background: var(--warn); }
+  .metric.alert { border-color: var(--danger); }
+  .metric.alert::before { background: var(--danger); animation: pulse 1s ease-in-out infinite; }
+
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+  .metric-name { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 6px; }
+  .metric-value { font-size: 1.6rem; font-weight: 700; line-height: 1; }
+  .metric-unit { font-size: 0.7rem; color: var(--muted); margin-top: 2px; }
+
+  /* Fault section */
+  select, input[type="number"] {
+    width: 100%;
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 0.85rem;
+    margin-bottom: 10px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  select:focus, input:focus { border-color: var(--accent); }
+
+  .fault-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  /* Fault log */
+  .fault-log {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 10px;
+    max-height: 120px;
+    overflow-y: auto;
+    margin-top: 12px;
+    font-size: 0.78rem;
+    font-family: 'Courier New', monospace;
+  }
+  .fault-entry { color: var(--warn); margin-bottom: 3px; }
+  .no-faults { color: var(--muted); }
+
+  /* Spark line area */
+  canvas { display: block; width: 100%; height: 80px; }
+
+  .sparkline-wrap {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .spark-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 6px; }
+
+  .sidebar { display: flex; flex-direction: column; gap: 0; }
+
+  @media (max-width: 740px) {
+    .layout { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Aero<span>Twin</span></div>
+  <div class="badge">Rotax 912 Digital Twin</div>
+  <div class="status-label" id="statusLabel">ENGINE RUNNING</div>
+  <div class="status-dot" id="statusDot"></div>
+</header>
+
+<div class="layout">
+
+  <!-- LEFT SIDEBAR: Controls -->
+  <div class="sidebar">
+    <div class="panel" style="margin-bottom:16px">
+      <div class="panel-title">Engine Controls</div>
+
+      <button class="btn btn-primary" id="engineToggle" onclick="toggleEngine()">⏸ Shutdown Engine</button>
+      <button class="btn btn-ghost" onclick="resetEngine()">↺ Reset Simulation</button>
+
+      <div class="ctrl">
+        <div class="ctrl-header">
+          <span class="ctrl-label">Throttle</span>
+          <span class="ctrl-value" id="throttleVal">0%</span>
+        </div>
+        <input type="range" id="throttle" min="0" max="100" value="0" oninput="onSlider(this,'throttleVal','%')">
+      </div>
+
+      <div class="ctrl">
+        <div class="ctrl-header">
+          <span class="ctrl-label">Altitude</span>
+          <span class="ctrl-value" id="altVal">0 m</span>
+        </div>
+        <input type="range" id="altitude" min="0" max="10000" value="0" step="50" oninput="onAltitude(this)">
+      </div>
+
+      <!-- ISA Atmosphere Info Bar -->
+      <div style="background:var(--card); border:1px solid var(--border); border-radius:6px; padding:10px; margin-bottom:12px; font-size:0.78rem;">
+        <div style="color:var(--muted); text-transform:uppercase; letter-spacing:0.8px; margin-bottom:6px;">ISA Standard Atmosphere</div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:4px 12px;">
+          <div style="color:var(--muted);">ISA Std Temp</div>
+          <div id="isaTemp" style="color:var(--accent); font-weight:600;">15.0 °C</div>
+          <div style="color:var(--muted);">Day Deviation ΔT</div>
+          <div id="isaDeltaDisplay" style="color:var(--accent2); font-weight:600;">±0 °C</div>
+          <div style="color:var(--muted);">Actual Ambient</div>
+          <div id="actualAmbient" style="color:var(--text); font-weight:600;">15.0 °C</div>
+          <div style="color:var(--muted);">Density Ratio σ</div>
+          <div id="densityRatio" style="color:var(--warn); font-weight:600;">1.000 (100%)</div>
+        </div>
+      </div>
+
+      <div class="ctrl">
+        <div class="ctrl-header">
+          <span class="ctrl-label">Day Type (ΔT from ISA)</span>
+          <span class="ctrl-value" id="isaDeltaVal">±0°C (ISA Std)</span>
+        </div>
+        <input type="range" id="isaDelta" min="-30" max="30" value="0" step="1" oninput="onIsaDelta(this)">
+        <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--muted); margin-top:2px;">
+          <span>ISA−30 (Arctic)</span><span>Standard</span><span>ISA+30 (Tropical)</span>
+        </div>
+      </div>
+
+      <div class="ctrl">
+        <div class="ctrl-header">
+          <span class="ctrl-label">Airspeed (IAS)</span>
+          <span class="ctrl-value" id="iasVal">0 kts</span>
+        </div>
+        <input type="range" id="airspeed" min="0" max="200" value="0" step="5" oninput="onSlider(this,'iasVal',' kts')">
+        <div style="display:flex; justify-content:space-between; font-size:0.7rem; color:var(--muted); margin-top:2px;">
+          <span>Ground</span><span>Cruise ~100</span><span>Vne ~200</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Fault Injection</div>
+
+      <select id="faultType">
+        <option value="misfire">🔥 Misfire</option>
+        <option value="oil_pressure_drop">🛢️ Oil Pressure Drop</option>
+        <option value="cooling_degradation">🌡️ Cooling Degradation</option>
+        <option value="vibration_growth">📳 Vibration Growth</option>
+        <option value="sensor_drift">📡 CHT Sensor Drift</option>
+        <option value="injector_abnormality">⛽ Injector Abnormality</option>
+        <option value="combustion_instability">💥 Combustion Instability</option>
+        <option value="battery_alternator_fail">🔋 Alternator Failure</option>
+      </select>
+
+      <div class="fault-row">
+        <div>
+          <div class="ctrl-label" style="font-size:0.78rem;color:var(--muted);margin-bottom:4px">Severity (0–1)</div>
+          <input type="number" id="faultSeverity" min="0" max="1" step="0.05" value="0.7">
+        </div>
+        <div>
+          <div class="ctrl-label" style="font-size:0.78rem;color:var(--muted);margin-bottom:4px">Duration (ticks)</div>
+          <input type="number" id="faultDuration" min="1" max="600" value="30">
+        </div>
+      </div>
+
+      <button class="btn btn-danger" onclick="triggerFault()">⚡ Inject Fault</button>
+
+      <div class="fault-log" id="faultLog">
+        <span class="no-faults">No active faults.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Telemetry -->
+  <div>
+    <div class="panel" style="margin-bottom:16px; position:relative;">
+      <!-- Engine Off Overlay -->
+      <div id="engineOffOverlay" style="display:none; position:absolute; inset:0; background:rgba(0,0,0,0.75); border-radius:10px; z-index:10; flex-direction:column; align-items:center; justify-content:center; gap:8px;">
+        <div style="font-size:2.5rem;">🛑</div>
+        <div style="font-size:1.2rem; font-weight:700; color:#ef4444; letter-spacing:2px;">ENGINE OFFLINE</div>
+        <div style="font-size:0.8rem; color:#888;">Click "Start Engine" to restart</div>
+      </div>
+      <div class="panel-title">Live Telemetry</div>
+      <div class="telemetry-grid">
+        <div class="metric" id="m-rpm">
+          <div class="metric-name">RPM</div>
+          <div class="metric-value" id="v-rpm">—</div>
+          <div class="metric-unit">rev/min</div>
+        </div>
+        <div class="metric" id="m-cht">
+          <div class="metric-name">CHT</div>
+          <div class="metric-value" id="v-cht">—</div>
+          <div class="metric-unit">°C  (normal ≤120, abs max 135)</div>
+        </div>
+        <div class="metric" id="m-egt">
+          <div class="metric-name">EGT</div>
+          <div class="metric-value" id="v-egt">—</div>
+          <div class="metric-unit">°C  (cruise 650–800, max 900)</div>
+        </div>
+        <div class="metric" id="m-oil_p">
+          <div class="metric-name">Oil Pressure</div>
+          <div class="metric-value" id="v-oil_p">—</div>
+          <div class="metric-unit">bar  (2–5 normal)</div>
+        </div>
+        <div class="metric" id="m-oil_t">
+          <div class="metric-name">Oil Temp</div>
+          <div class="metric-value" id="v-oil_t">—</div>
+          <div class="metric-unit">°C  (90–110 normal, max 130)</div>
+        </div>
+        <div class="metric" id="m-fuel">
+          <div class="metric-name">Fuel Flow</div>
+          <div class="metric-value" id="v-fuel">—</div>
+          <div class="metric-unit">L/hr  (idle ≈4.5, max ≈26)</div>
+        </div>
+        <div class="metric" id="m-map">
+          <div class="metric-name">MAP</div>
+          <div class="metric-value" id="v-map">—</div>
+          <div class="metric-unit">inHg (idle ~16, max ~29.9)</div>
+        </div>
+        <div class="metric" id="m-vib">
+          <div class="metric-name">Vibration</div>
+          <div class="metric-value" id="v-vib">—</div>
+          <div class="metric-unit">amplitude</div>
+        </div>
+        <div class="metric" id="m-bat">
+          <div class="metric-name">Battery</div>
+          <div class="metric-value" id="v-bat">—</div>
+          <div class="metric-unit">V  (13.8–14.2 normal)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sparklines -->
+    <div class="panel">
+      <div class="panel-title">Trend History (last 60 ticks)</div>
+      <div class="sparkline-wrap">
+        <div class="spark-label">RPM</div>
+        <canvas id="spark-rpm" height="60"></canvas>
+      </div>
+      <div class="sparkline-wrap">
+        <div class="spark-label">CHT °C</div>
+        <canvas id="spark-cht" height="60"></canvas>
+      </div>
+      <div class="sparkline-wrap">
+        <div class="spark-label">Oil Pressure bar</div>
+        <canvas id="spark-oil" height="60"></canvas>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API = '';  // same origin
+let engineOn = true;
+const history = { rpm: [], cht: [], oil: [] };
+const MAX_HIST = 60;
+
+function applyEngineUI(on) {
+  const btn = document.getElementById('engineToggle');
+  const dot = document.getElementById('statusDot');
+  const lbl = document.getElementById('statusLabel');
+  const overlay = document.getElementById('engineOffOverlay');
+  if (on) {
+    btn.textContent = '⏸ Shutdown Engine';
+    btn.className = 'btn btn-primary';
+    dot.className = 'status-dot';
+    lbl.textContent = 'ENGINE RUNNING';
+    overlay.style.display = 'none';
+  } else {
+    btn.textContent = '▶ Start Engine';
+    btn.className = 'btn btn-warn';
+    dot.className = 'status-dot off';
+    lbl.textContent = 'ENGINE OFF';
+    overlay.style.display = 'flex';
+
+    // Zero all telemetry displays immediately
+    ['rpm','cht','egt','oil_p','oil_t','fuel','vib','bat','map'].forEach(id => {
+      document.getElementById('v-' + id).textContent = '0';
+      const card = document.getElementById('m-' + id);
+      if (card) card.className = 'metric';   // clear warn/alert colours
+    });
+
+    // Clear sparkline history so stale data doesn't persist on restart
+    history.rpm = []; history.cht = []; history.oil = [];
+    ['spark-rpm','spark-cht','spark-oil'].forEach(id => {
+      const c = document.getElementById(id);
+      if (c) c.getContext('2d').clearRect(0, 0, c.width, c.height);
+    });
+
+    // Clear fault log
+    document.getElementById('faultLog').innerHTML = '<span class="no-faults">No active faults.</span>';
+  }
+}
+
+// ── Atmosphere state ──────────────────────────────────────────────────────────
+let isaStdTemp = 15.0;   // ISA standard temp at current altitude (°C)
+let isaDelta   = 0;      // User's ΔT from ISA (hot/cold day offset)
+
+function computeActualAmbient() {
+  return isaStdTemp + isaDelta;
+}
+
+/** Called when altitude slider moves — fetches ISA temp from server and refreshes bar */
+async function onAltitude(el) {
+  const alt = parseFloat(el.value);
+  document.getElementById('altVal').textContent = alt + ' m';
+  try {
+    const r = await fetch(API + `/isa_temp?altitude=${alt}`);
+    const d = await r.json();
+    isaStdTemp = d.isa_temp_celsius;
+    updateAtmosphereBar(d.density_ratio);
+  } catch(e) {
+    // Fallback: compute client-side (ISA troposphere lapse rate)
+    isaStdTemp = Math.max(-56.5, 15.0 - 6.5 * (alt / 1000.0));
+    const sigma = Math.max(0.10, Math.min(1.05,
+      Math.pow(Math.max(0, 1.0 - 2.25577e-5 * alt), 5.25588) * (288.15 / (isaStdTemp + 273.15))
+    ));
+    updateAtmosphereBar(sigma);
+  }
+  sendControls();
+}
+
+/** Called when the ΔT slider moves */
+function onIsaDelta(el) {
+  isaDelta = parseInt(el.value);
+  const sign = isaDelta >= 0 ? '+' : '';
+  const label = isaDelta === 0
+    ? '±0°C (ISA Std)'
+    : isaDelta > 0
+      ? `ISA+${isaDelta}°C (${isaDelta > 20 ? 'Tropical' : 'Hot Day'})`
+      : `ISA${isaDelta}°C (${isaDelta < -20 ? 'Arctic' : 'Cold Day'})`;
+  document.getElementById('isaDeltaVal').textContent = label;
+  // Re-fetch density ratio for the new actual temp
+  onAltitude(document.getElementById('altitude'));
+}
+
+/** Updates the ISA info bar UI */
+function updateAtmosphereBar(sigma) {
+  const actual = computeActualAmbient();
+  document.getElementById('isaTemp').textContent        = isaStdTemp.toFixed(1) + ' °C';
+  document.getElementById('isaDeltaDisplay').textContent = (isaDelta >= 0 ? '+' : '') + isaDelta + ' °C';
+  document.getElementById('actualAmbient').textContent  = actual.toFixed(1) + ' °C';
+  const pct = (sigma * 100).toFixed(1);
+  const sigmaEl = document.getElementById('densityRatio');
+  sigmaEl.textContent = sigma.toFixed(3) + `  (${pct}% SL power)`;
+  // Colour: green > 80%, yellow 60-80%, red < 60%
+  sigmaEl.style.color = sigma > 0.80 ? 'var(--accent2)' : sigma > 0.60 ? 'var(--warn)' : 'var(--danger)';
+}
+
+function onSlider(el, valId, unit) {
+  document.getElementById(valId).textContent = el.value + unit;
+  sendControls();
+}
+
+async function toggleEngine() {
+  engineOn = !engineOn;
+  applyEngineUI(engineOn);  // instant visual feedback FIRST
+  const res = await sendControls();
+  // Confirm the server acknowledged the correct state
+  if (res && typeof res.is_running !== 'undefined' && res.is_running !== engineOn) {
+    // Server disagreed — revert
+    engineOn = !engineOn;
+    applyEngineUI(engineOn);
+    console.warn('Server state mismatch, reverted.');
+  }
+}
+
+async function resetEngine() {
+  await fetch(API + '/reset', { method: 'POST', headers: {'Content-Type':'application/json'}, body: '{}' });
+  engineOn = true;
+  applyEngineUI(true);
+  history.rpm = []; history.cht = []; history.oil = [];
+  document.getElementById('faultLog').innerHTML = '<span class="no-faults">No active faults.</span>';
+  // Reset sliders
+  document.getElementById('throttle').value = 0;
+  document.getElementById('throttleVal').textContent = '0%';
+  document.getElementById('altitude').value = 0;
+  document.getElementById('altVal').textContent = '0 m';
+  document.getElementById('airspeed').value = 0;
+  document.getElementById('iasVal').textContent = '0 kts';
+  document.getElementById('isaDelta').value = 0;
+  isaDelta = 0;
+  await onAltitude(document.getElementById('altitude')); // resets ISA bar to sea level
+  sendControls();
+}
+
+async function sendControls() {
+  try {
+    const res = await fetch(API + '/controls', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        throttle:     parseFloat(document.getElementById('throttle').value),
+        altitude:     parseFloat(document.getElementById('altitude').value),
+        ambient_temp: computeActualAmbient(),   // ISA(alt) + ΔT  ← physically correct
+        airspeed_kts: parseFloat(document.getElementById('airspeed').value),
+        is_running:   engineOn
+      })
+    });
+    return await res.json();
+  } catch(e) {
+    console.error('sendControls error:', e);
+    return null;
+  }
+}
+
+async function triggerFault() {
+  await fetch(API + '/faults', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      fault_type: document.getElementById('faultType').value,
+      severity:   parseFloat(document.getElementById('faultSeverity').value),
+      duration:   parseInt(document.getElementById('faultDuration').value)
+    })
+  });
+}
+
+// ── Metric helpers ───────────────────────────────────────────────────────────
+function setMetric(id, value, digits = 1) {
+  document.getElementById('v-' + id).textContent = value.toFixed(digits);
+}
+
+function colorMetric(id, value, warnLow, alertLow, warnHigh, alertHigh) {
+  const el = document.getElementById('m-' + id);
+  el.className = 'metric';
+  if (value <= alertLow || value >= alertHigh) el.classList.add('alert');
+  else if (value <= warnLow || value >= warnHigh) el.classList.add('warn');
+}
+
+// ── Sparkline renderer ───────────────────────────────────────────────────────
+function drawSpark(id, data, color) {
+  const canvas = document.getElementById(id);
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth;
+  const H = 60;
+  canvas.width = W;
+  canvas.height = H;
+  ctx.clearRect(0, 0, W, H);
+
+  if (data.length < 2) return;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+
+  ctx.beginPath();
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 4;
+
+  data.forEach((v, i) => {
+    const x = (i / (data.length - 1)) * W;
+    const y = H - ((v - min) / range) * (H - 8) - 4;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // fill
+  ctx.lineTo(W, H);
+  ctx.lineTo(0, H);
+  ctx.closePath();
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = color.replace(')', ', 0.1)').replace('rgb', 'rgba');
+  ctx.fill();
+}
+
+// ── Poll loop ────────────────────────────────────────────────────────────────
+async function poll() {
+  // When engine is off, still tick the server model (so it can decay to rest)
+  // but skip all display updates — the overlay and zeroed metrics say it all.
+  if (!engineOn) {
+    try { await fetch(API + '/telemetry'); } catch(_) {}
+    return;
+  }
+  try {
+    const res = await fetch(API + '/telemetry');
+    const { telemetry: t, labels } = await res.json();
+
+    setMetric('rpm', t.rpm, 1);
+    setMetric('cht', t.cht_celsius, 1);
+    setMetric('egt', t.egt_celsius, 1);
+    setMetric('oil_p', t.oil_pressure_bar, 2);
+    setMetric('oil_t', t.oil_temp_celsius, 1);
+    setMetric('fuel', t.fuel_flow, 2);
+    setMetric('vib', t.vibration, 4);
+    setMetric('bat', t.battery_voltage_v, 1);
+    setMetric('map', t.map_inhg, 1);
+
+    // Rotax 912 limits: CHT normal ≤120°C, abs max 135°C | Oil 90-110°C, max 130°C
+    colorMetric('cht', t.cht_celsius, 115, 0, 120, 135);  // warn@115, alert@120
+    colorMetric('oil_p', t.oil_pressure_bar, 2.0, 0.8, 5.0, 7.0);
+    colorMetric('bat', t.battery_voltage_v, 13.5, 12.0, 14.5, 16.0);
+    colorMetric('egt', t.egt_celsius, 650, 0, 800, 900);
+    colorMetric('oil_t', t.oil_temp_celsius, 90, 0, 110, 130);
+    colorMetric('vib', t.vibration, 0, 0, 0.5, 1.0);
+    colorMetric('map', t.map_inhg, 10, 5, 29, 31);
+
+    // history
+    const push = (arr, v) => { arr.push(v); if (arr.length > MAX_HIST) arr.shift(); };
+    push(history.rpm, t.rpm);
+    push(history.cht, t.cht_celsius);
+    push(history.oil, t.oil_pressure_bar);
+
+    drawSpark('spark-rpm', history.rpm, 'rgb(59,130,246)');
+    drawSpark('spark-cht', history.cht, 'rgb(239,68,68)');
+    drawSpark('spark-oil', history.oil, 'rgb(16,185,129)');
+
+    // fault log
+    const log = document.getElementById('faultLog');
+    if (labels.length > 0) {
+      log.innerHTML = labels.map(l =>
+        `<div class="fault-entry">⚡ [T${l.onset_tick}] ${l.fault_type} · sev ${l.severity.toFixed(2)}</div>`
+      ).join('');
+    } else {
+      log.innerHTML = '<span class="no-faults">No active faults.</span>';
+    }
+  } catch(e) {
+    console.error('Poll error:', e);
+  }
+}
+
+setInterval(poll, 500);   // 2 Hz telemetry poll
+applyEngineUI(engineOn);  // Set initial button / overlay state
+// Initialise ISA bar at sea level, then push first controls to server
+onAltitude(document.getElementById('altitude'));
+</script>
+</body>
+</html>

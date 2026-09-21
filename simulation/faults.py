@@ -26,13 +26,14 @@ class FaultInjector:
             "ticks_elapsed": 0
         })
         
-    def step(self, throttle_position: float, altitude_m: float, ambient_temp_celsius: float, is_running: bool = True) -> tuple[Telemetry, list[FaultLabel]]:
+    def step(self, throttle_position: float, altitude_m: float, ambient_temp_celsius: float,
+             is_running: bool = True, airspeed_kts: float = 0.0) -> tuple[Telemetry, list[FaultLabel]]:
         """
         Advance the engine and apply any active faults to the telemetry.
         Returns the modified Telemetry and a list of active FaultLabels.
         """
         # Get clean telemetry
-        telemetry = self.engine.step(throttle_position, altitude_m, ambient_temp_celsius, is_running)
+        telemetry = self.engine.step(throttle_position, altitude_m, ambient_temp_celsius, is_running, airspeed_kts)
         
         labels = []
         if not self.active_faults:

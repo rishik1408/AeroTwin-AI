@@ -17,7 +17,7 @@ class Telemetry:
     # Engine RPM. idle ~1400, max continuous 5500, max takeoff 5800 for 5 min only
     rpm: float
     
-    # Cylinder Head Temperature (Celsius). normal 110-135, max 135
+    # Cylinder Head Temperature (Celsius). normal 80-120, max 135
     cht_celsius: float
     
     # Exhaust Gas Temperature (Celsius). normal cruise 650-800, max ~900
@@ -32,7 +32,7 @@ class Telemetry:
     # Vibration (unitless amplitude). no hard spec - baseline scaling with RPM
     vibration: float
     
-    # Fuel flow. correlates with RPM/throttle
+    # Fuel flow (L/hr). idle ~4.5, cruise ~15-18, max ~26
     fuel_flow: float
     
     # Battery & Alternator voltage. Normal running ~13.8-14.2V, off ~12.0-12.5V
@@ -40,6 +40,13 @@ class Telemetry:
     
     # Injection timing (degrees before Top Dead Center). Advances with RPM.
     injection_timing_deg: float
+    
+    # Manifold Absolute Pressure (inches of mercury).
+    # Sea level idle ~16 inHg, sea level full throttle ~29.9 inHg.
+    map_inhg: float
+
+    # Indicated Airspeed (knots). Affects ram-air cooling of CHT and oil temp.
+    airspeed_kts: float
     
     # Throttle position (0-100%)
     throttle_position: float
