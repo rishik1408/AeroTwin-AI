@@ -1,3 +1,9 @@
+ HEAD
+.DS_Store
+__pycache__/
+dataset/
+*.csv
+
 # Python
 __pycache__/
 *.py[cod]
@@ -42,3 +48,4 @@ mosquitto/log/
 .DS_Store
 .vscode/
 .idea/
+3d99f7084446a799e455d9007dc5ef72da04b610
