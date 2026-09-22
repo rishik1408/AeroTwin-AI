@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+/* ── AeroTwin Design System ── */
+@theme {
+  --color-bg-primary: #101112;
+  --color-bg-surface: #181A1D;
+  --color-bg-surface-2: #222529;
+  --color-bg-light: #F4F4F1;
+  --color-text-primary: #F5F5F3;
+  --color-text-secondary: #969BA1;
+  --color-border: rgba(255, 255, 255, 0.10);
+  --color-border-strong: rgba(255, 255, 255, 0.18);
+  --color-critical: #E53935;
+  --color-warning: #F0A52B;
+  --color-healthy: #38A169;
+  --color-info: #4C8DFF;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'Consolas', monospace;
+}
+
+/* ── Base Reset ── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #2a2d32 transparent;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2a2d32; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #3a3d42; }
+
+/* ── Status pulse animation ── */
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.animate-pulse-live {
+  animation: pulse-live 2s ease-in-out infinite;
+}
+
+/* ── Metric value mono ── */
+.font-metric {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* ── Card base ── */
+.card {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.card-inner {
+  background: var(--color-bg-surface-2);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+/* ── Severity classes ── */
+.severity-critical { color: var(--color-critical); }
+.severity-warning { color: var(--color-warning); }
+.severity-healthy { color: var(--color-healthy); }
+.severity-info { color: var(--color-info); }
+
+.severity-bg-critical { background: rgba(229, 57, 53, 0.12); border-color: rgba(229, 57, 53, 0.3); }
+.severity-bg-warning { background: rgba(240, 165, 43, 0.12); border-color: rgba(240, 165, 43, 0.3); }
+.severity-bg-healthy { background: rgba(56, 161, 105, 0.12); border-color: rgba(56, 161, 105, 0.3); }
+.severity-bg-info { background: rgba(76, 141, 255, 0.12); border-color: rgba(76, 141, 255, 0.3); }
